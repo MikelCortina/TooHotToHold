@@ -3,33 +3,62 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
-    public string horizontalAxis = "Horizontal1"; // Cambiar a "Horizontal2" para el J2
-    public string verticalAxis = "Vertical1";     // Cambiar a "Vertical2" para el J2
+    [Header("Inputs")]
+    public string horizontalAxis = "Horizontal1";
+    public string verticalAxis = "Vertical1";
 
+    [Header("Físicas")]
     public float moveForce = 20f;
     public float maxSpeed = 5f;
+
+    [Header("Referencias")]
+    public Transform cameraTransform; // Arrastra tu Main Camera aquí en el Inspector
 
     private Rigidbody rb;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+
+        // Evitar que el jugador se caiga como un dominó por las físicas
+        rb.freezeRotation = true;
     }
 
     void FixedUpdate()
     {
-        // Obtener input
+        // 1. Rotar el jugador con la cámara
+        if (cameraTransform != null)
+        {
+            // Obtener hacia dónde mira la cámara, ignorando la inclinación (eje Y)
+            Vector3 cameraForward = cameraTransform.forward;
+            cameraForward.y = 0f;
+            cameraForward.Normalize();
+
+            // Rotar el Rigidbody hacia esa dirección
+            if (cameraForward != Vector3.zero)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(cameraForward);
+                rb.MoveRotation(targetRotation);
+            }
+        }
+
+        // 2. Obtener input
         float h = Input.GetAxis(horizontalAxis);
         float v = Input.GetAxis(verticalAxis);
 
-        // A�adir fuerza al jugador
-        Vector3 movement = new Vector3(h, 0, v).normalized;
-        rb.AddForce(movement * moveForce, ForceMode.Acceleration);
+        // 3. Calcular dirección de movimiento basada en la cámara
+        Vector3 moveDir = (transform.forward * v + transform.right * h).normalized;
 
-        // Limitar la velocidad m�xima para que no salgan volando
-        if (rb.linearVelocity.magnitude > maxSpeed)
+        // Añadir fuerza al jugador
+        rb.AddForce(moveDir * moveForce, ForceMode.Acceleration);
+
+        // 4. Limitar la velocidad máxima (solo en plano horizontal para no afectar la gravedad)
+        Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        if (flatVelocity.magnitude > maxSpeed)
         {
-            rb.linearVelocity = rb.linearVelocity.normalized * maxSpeed;
+            Vector3 limitedVelocity = flatVelocity.normalized * maxSpeed;
+            // Aplicar la velocidad limitada, manteniendo la velocidad de caída (Y) intacta
+            rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
         }
     }
 }
