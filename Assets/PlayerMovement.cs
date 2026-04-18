@@ -1,64 +1,60 @@
 using UnityEngine;
+using Fusion;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : NetworkBehaviour // Cambiado a NetworkBehaviour
 {
-    [Header("Inputs")]
-    public string horizontalAxis = "Horizontal1";
-    public string verticalAxis = "Vertical1";
-
     [Header("Físicas")]
     public float moveForce = 20f;
     public float maxSpeed = 5f;
 
-    [Header("Referencias")]
-    public Transform cameraTransform; // Arrastra tu Main Camera aquí en el Inspector
-
     private Rigidbody rb;
 
-    void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-
-        // Evitar que el jugador se caiga como un dominó por las físicas
         rb.freezeRotation = true;
     }
 
-    void FixedUpdate()
+    // FixedUpdateNetwork reemplaza a FixedUpdate en Fusion
+    // FixedUpdateNetwork reemplaza a FixedUpdate en Fusion
+    public override void FixedUpdateNetwork()
     {
-        // 1. Rotar el jugador con la cámara
-        if (cameraTransform != null)
+        // Obtenemos el input que definimos en NetworkInputData
+        if (GetInput(out NetworkInputData data))
         {
-            // Obtener hacia dónde mira la cámara, ignorando la inclinación (eje Y)
-            Vector3 cameraForward = cameraTransform.forward;
-            cameraForward.y = 0f;
-            cameraForward.Normalize();
+            // --- INICIO DE LA CORRECCIÓN ---
+            // 1. Tomamos la dirección de la cámara pero anulamos el eje Y (inclinación)
+            Vector3 flatCameraForward = data.cameraForward;
+            flatCameraForward.y = 0f;
 
-            // Rotar el Rigidbody hacia esa dirección
-            if (cameraForward != Vector3.zero)
+            // Rotar el jugador con la cámara (solo en el eje Y)
+            if (flatCameraForward != Vector3.zero)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(cameraForward);
+                flatCameraForward.Normalize();
+                Quaternion targetRotation = Quaternion.LookRotation(flatCameraForward);
                 rb.MoveRotation(targetRotation);
             }
-        }
+            // --- FIN DE LA CORRECCIÓN ---
 
-        // 2. Obtener input
-        float h = Input.GetAxis(horizontalAxis);
-        float v = Input.GetAxis(verticalAxis);
+            // 2. Calcular dirección de movimiento (también usando el vector aplanado es mejor)
+            // Aplanamos también la derecha para evitar que el jugador intente "volar" o hundirse
+            Vector3 flatCameraRight = data.cameraRight;
+            flatCameraRight.y = 0f;
+            flatCameraRight.Normalize();
 
-        // 3. Calcular dirección de movimiento basada en la cámara
-        Vector3 moveDir = (transform.forward * v + transform.right * h).normalized;
+            Vector3 moveDir = (flatCameraForward * data.vertical + flatCameraRight * data.horizontal).normalized;
 
-        // Añadir fuerza al jugador
-        rb.AddForce(moveDir * moveForce, ForceMode.Acceleration);
+            // 3. Añadir fuerza al jugador
+            rb.AddForce(moveDir * moveForce, ForceMode.Acceleration);
 
-        // 4. Limitar la velocidad máxima (solo en plano horizontal para no afectar la gravedad)
-        Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        if (flatVelocity.magnitude > maxSpeed)
-        {
-            Vector3 limitedVelocity = flatVelocity.normalized * maxSpeed;
-            // Aplicar la velocidad limitada, manteniendo la velocidad de caída (Y) intacta
-            rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
+            // 4. Limitar la velocidad máxima
+            Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+            if (flatVelocity.magnitude > maxSpeed)
+            {
+                Vector3 limitedVelocity = flatVelocity.normalized * maxSpeed;
+                rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
+            }
         }
     }
 }
