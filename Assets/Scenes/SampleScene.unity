@@ -133,7 +133,6 @@ GameObject:
   - component: {fileID: 30617332}
   - component: {fileID: 30617331}
   - component: {fileID: 30617336}
-  - component: {fileID: 30617338}
   - component: {fileID: 30617337}
   m_Layer: 0
   m_Name: Bandeja
@@ -232,11 +231,11 @@ MonoBehaviour:
   p1_HandRight: {fileID: 0}
   p2_HandLeft: {fileID: 0}
   p2_HandRight: {fileID: 0}
+  followSpeed: 8
+  maxRotationAngle: 60
+  dropDistance: 6
   minDistance: 0.5
   maxDistance: 3.5
-  followSpeed: 8
-  dropDistance: 6
-  maxRotationAngle: 60
   invertX: 0
   invertZ: 0
   swapAxes: 0
@@ -284,47 +283,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 30617330}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a591d221a634417e9827eb58e17de84, type: 3}
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _stateAuthorityChangeErrorCorrectionDelta: 0
   SyncScale: 0
-  SyncParent: 1
-  _interpolationTarget: {fileID: 0}
-  UsePreciseRotation: 0
-  UseRenderSleepThresholds: 1
-  RenderThresholds:
-    UseEnergy: 1
-    Position: 0.01
-    Rotation: 0.01
-    Scale: 0.01
---- !u!54 &30617338
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 30617330}
-  serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
 --- !u!1 &329529546
 GameObject:
   m_ObjectHideFlags: 0
@@ -350,7 +316,7 @@ Transform:
   m_GameObject: {fileID: 329529546}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.18, z: 1.8}
+  m_LocalPosition: {x: -0.13, y: 3.18, z: 1.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -708,7 +674,7 @@ Transform:
   m_GameObject: {fileID: 1645290467}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.18, z: 0}
+  m_LocalPosition: {x: -0.15, y: 3.18, z: 4.18}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
