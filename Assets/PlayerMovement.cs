@@ -28,12 +28,15 @@ public class PlayerMovement : NetworkBehaviour // Cambiado a NetworkBehaviour
             Vector3 flatCameraForward = data.cameraForward;
             flatCameraForward.y = 0f;
 
-            // Rotar el jugador con la cámara (solo en el eje Y)
             if (flatCameraForward != Vector3.zero)
             {
                 flatCameraForward.Normalize();
                 Quaternion targetRotation = Quaternion.LookRotation(flatCameraForward);
-                rb.MoveRotation(targetRotation);
+
+                // Usamos Slerp para suavizar la rotación y evitar que un micro-tirón de la cámara
+                // provoque un giro de 180 grados instantáneo.
+                Quaternion smoothedRotation = Quaternion.Slerp(rb.rotation, targetRotation, Runner.DeltaTime * 15f);
+                rb.MoveRotation(smoothedRotation);
             }
             // --- FIN DE LA CORRECCIÓN ---
 

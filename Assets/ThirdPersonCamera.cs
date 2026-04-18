@@ -4,7 +4,11 @@ using Fusion;
 public class ThirdPersonCamera : MonoBehaviour
 {
     [Header("Configuración")]
-    public NetworkObject targetNetworkObject; // Referencia al objeto de red del jugador
+    public NetworkObject targetNetworkObject;
+
+    [Tooltip("Arrastra aquí el modelo 3D HIJO del jugador, el mismo que pusiste en Interpolation Target")]
+    public Transform interpolationTarget; // <--- ¡LA CLAVE ESTÁ AQUÍ!
+
     public float distance = 5f;
     public float mouseSensitivity = 2f;
     public Vector2 pitchMinMax = new Vector2(-40, 85);
@@ -14,7 +18,6 @@ public class ThirdPersonCamera : MonoBehaviour
 
     void Start()
     {
-        // Solo bloqueamos el cursor si este es nuestro jugador
         if (targetNetworkObject != null && targetNetworkObject.HasInputAuthority)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -22,15 +25,16 @@ public class ThirdPersonCamera : MonoBehaviour
         }
         else
         {
-            // Si no es nuestro jugador, apagamos la cámara y este script
             gameObject.SetActive(false);
         }
     }
 
+    // Usar LateUpdate es correcto, se ejecuta después de que Fusion actualiza los visuales.
     void LateUpdate()
     {
         if (targetNetworkObject == null || !targetNetworkObject.HasInputAuthority) return;
 
+        // 1. Recogemos el input visual
         yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
         pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
         pitch = Mathf.Clamp(pitch, pitchMinMax.x, pitchMinMax.y);
@@ -38,6 +42,9 @@ public class ThirdPersonCamera : MonoBehaviour
         Vector3 targetRotation = new Vector3(pitch, yaw);
         transform.eulerAngles = targetRotation;
 
-        transform.position = targetNetworkObject.transform.position - transform.forward * distance;
+        // 2. Seguimos al Interpolation Target (suave), si por error no hay, caemos al root (con tirones)
+        Transform targetToFollow = interpolationTarget != null ? interpolationTarget : targetNetworkObject.transform;
+
+        transform.position = targetToFollow.position - transform.forward * distance;
     }
 }
