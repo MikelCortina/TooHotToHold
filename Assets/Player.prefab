@@ -124,6 +124,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveForce: 20
   maxSpeed: 5
+  jumpForce: 5
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!65 &2995119271380453926
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -444,7 +448,6 @@ GameObject:
   - component: {fileID: 2354336228879765531}
   - component: {fileID: 837708193335135307}
   - component: {fileID: 1945812243803968606}
-  - component: {fileID: 3258709393516567957}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -520,24 +523,3 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &3258709393516567957
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8020079186106089638}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.0000005, y: 1, z: 1.0000004}
-  m_Center: {x: -0.000000178814, y: 0, z: -0.00000047683733}

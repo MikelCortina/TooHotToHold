@@ -2,13 +2,21 @@ using UnityEngine;
 using Fusion;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerMovement : NetworkBehaviour // Cambiado a NetworkBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
     [Header("Físicas")]
     public float moveForce = 20f;
     public float maxSpeed = 5f;
+    public float jumpForce = 5f;
+
+    [Header("Detección Suelo")]
+    public LayerMask groundLayer;
 
     private Rigidbody rb;
+    [Networked] private NetworkBool isGrounded { get; set; }
+
+    // NUEVO: Guardamos el estado anterior de los botones para saber cuándo se acaban de pulsar
+    [Networked] private NetworkButtons previousButtons { get; set; }
 
     private void Awake()
     {
@@ -16,42 +24,48 @@ public class PlayerMovement : NetworkBehaviour // Cambiado a NetworkBehaviour
         rb.freezeRotation = true;
     }
 
-    // FixedUpdateNetwork reemplaza a FixedUpdate en Fusion
-    // FixedUpdateNetwork reemplaza a FixedUpdate en Fusion
     public override void FixedUpdateNetwork()
     {
-        // Obtenemos el input que definimos en NetworkInputData
         if (GetInput(out NetworkInputData data))
         {
-            // --- INICIO DE LA CORRECCIÓN ---
-            // 1. Tomamos la dirección de la cámara pero anulamos el eje Y (inclinación)
+            // 1. RAYCAST CORREGIDO
+            Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
+            // 0.5f (bajar al centro) + 1.0f (bajar a los pies) + 0.2f (margen para tocar el piso)
+            float totalCheckDistance = 1.7f;
+
+            isGrounded = Physics.Raycast(rayOrigin, Vector3.down, totalCheckDistance, groundLayer);
+
+            Debug.DrawRay(rayOrigin, Vector3.down * totalCheckDistance, isGrounded ? Color.green : Color.red);
+
+            // 2. LECTURA DE BOTONES AL ESTILO FUSION (Equivalente a GetKeyDown)
+            NetworkButtons pressedButtons = data.buttons.GetPressed(previousButtons);
+            previousButtons = data.buttons;
+
+            if (pressedButtons.IsSet(MyButtons.Jump) && isGrounded)
+            {
+                Debug.Log($"¡Salto! ¿En el suelo?: {isGrounded}");
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            }
+
+            // 3. Rotación
             Vector3 flatCameraForward = data.cameraForward;
             flatCameraForward.y = 0f;
-
             if (flatCameraForward != Vector3.zero)
             {
                 flatCameraForward.Normalize();
                 Quaternion targetRotation = Quaternion.LookRotation(flatCameraForward);
-
-                // Usamos Slerp para suavizar la rotación y evitar que un micro-tirón de la cámara
-                // provoque un giro de 180 grados instantáneo.
-                Quaternion smoothedRotation = Quaternion.Slerp(rb.rotation, targetRotation, Runner.DeltaTime * 15f);
-                rb.MoveRotation(smoothedRotation);
+                rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, Runner.DeltaTime * 15f);
             }
-            // --- FIN DE LA CORRECCIÓN ---
 
-            // 2. Calcular dirección de movimiento (también usando el vector aplanado es mejor)
-            // Aplanamos también la derecha para evitar que el jugador intente "volar" o hundirse
+            // 4. Movimiento Horizontal
             Vector3 flatCameraRight = data.cameraRight;
             flatCameraRight.y = 0f;
             flatCameraRight.Normalize();
-
             Vector3 moveDir = (flatCameraForward * data.vertical + flatCameraRight * data.horizontal).normalized;
-
-            // 3. Añadir fuerza al jugador
             rb.AddForce(moveDir * moveForce, ForceMode.Acceleration);
 
-            // 4. Limitar la velocidad máxima
+            // 5. Limitar velocidad máxima
             Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
             if (flatVelocity.magnitude > maxSpeed)
             {

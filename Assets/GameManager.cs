@@ -1,8 +1,9 @@
-using UnityEngine;
 using Fusion;
+using Fusion.Addons.Physics;
 using Fusion.Sockets;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
 {
@@ -19,6 +20,8 @@ public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
 
     async void Start()
     {
+        // Esto le da el control a Fusion sobre el PhysX de Unity
+        gameObject.AddComponent<RunnerSimulatePhysics3D>();
         await StartGame();
     }
 
@@ -27,7 +30,10 @@ public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
         _runner = gameObject.AddComponent<NetworkRunner>();
         _runner.ProvideInput = true;
 
-        // ¡Esta es la línea clave! Obligamos a Fusion a escuchar nuestros botones
+        // --- ESTA ES LA LÍNEA MÁGICA PARA LAS FÍSICAS ---
+        // Obligamos a Fusion a controlar el motor de físicas para la predicción
+        gameObject.AddComponent<RunnerSimulatePhysics3D>();
+
         _runner.AddCallbacks(this);
 
         await _runner.StartGame(new StartGameArgs()
@@ -77,14 +83,16 @@ public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // Dentro de GameManager.cs
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new NetworkInputData();
 
-        // NOTA: En tu script original usabas "Horizontal1". 
-        // Asegúrate de que en Unity (Edit > Project Settings > Input Manager) se llamen "Horizontal" y "Vertical".
         data.horizontal = Input.GetAxis("Horizontal");
         data.vertical = Input.GetAxis("Vertical");
+
+        // NUEVO: Guardamos el estado del botón de salto
+        data.buttons.Set(MyButtons.Jump, Input.GetKey(KeyCode.Space));
 
         if (Camera.main != null)
         {
@@ -93,7 +101,6 @@ public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
         }
         else
         {
-            // SALVACAÍDAS: Si no hay cámara etiquetada como MainCamera, usamos el norte global del mundo
             data.cameraForward = Vector3.forward;
             data.cameraRight = Vector3.right;
         }
