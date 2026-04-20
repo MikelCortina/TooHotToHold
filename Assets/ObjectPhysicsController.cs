@@ -28,14 +28,27 @@ public class ObjectPhysicsController : NetworkBehaviour
     private Vector3 prevP2Center;
     private float currentPullDirection = 0f;
 
-    private void Awake() => rb = GetComponent<Rigidbody>();
+    private void Awake()
+    {
+        // Aseguramos que el Rigidbody exista desde el principio para que Zibra pueda leer la inercia
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+        }
+
+        // Lo mantenemos cinemático mientras los jugadores lo sostienen
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+    }
 
     public override void FixedUpdateNetwork()
     {
         if (HasDropped) return;
 
-        // 1. BUSCAR JUGADORES (Todos los clientes necesitan las referencias para cálculos locales si fuera necesario, 
-        // pero principalmente el Host para mover el objeto)
+        // 1. BUSCAR JUGADORES
         if (p1_HandLeft == null || p2_HandLeft == null)
         {
             FindHands();
@@ -43,7 +56,6 @@ public class ObjectPhysicsController : NetworkBehaviour
         }
 
         // 2. SOLO EL HOST CALCULA Y MUEVE EL OBJETO
-        // El NetworkTransform se encargará de sincronizar transform.position y rotation al resto.
         if (Object.HasStateAuthority)
         {
             ApplyPhysicsLogic();
@@ -55,7 +67,6 @@ public class ObjectPhysicsController : NetworkBehaviour
         PlayerHands[] players = FindObjectsOfType<PlayerHands>();
         if (players.Length >= 2)
         {
-            // Ordenar por ID de Red para que todos los clientes asignen el mismo P1 y P2
             System.Array.Sort(players, (a, b) => a.Object.InputAuthority.RawEncoded.CompareTo(b.Object.InputAuthority.RawEncoded));
 
             p1_HandLeft = players[0].manoIzquierda;
@@ -81,11 +92,12 @@ public class ObjectPhysicsController : NetworkBehaviour
             return;
         }
 
-        // Movimiento de posición
+        // Movimiento de posición usando Rigidbody (Crucial para la inercia de fluidos)
         Vector3 idealCenter = (p1Center + p2Center) / 2f;
-        transform.position = Vector3.Lerp(transform.position, idealCenter, Runner.DeltaTime * followSpeed);
+        Vector3 newPos = Vector3.Lerp(rb.position, idealCenter, Runner.DeltaTime * followSpeed);
+        rb.MovePosition(newPos);
 
-        // Lógica de Rotación (Mantenemos tu lógica original de inclinación)
+        // Lógica de Rotación
         Vector3 axis = (p2Center - p1Center).normalized;
         float pullP1 = Vector3.Dot(p1Center - prevP1Center, -axis);
         float pullP2 = Vector3.Dot(p2Center - prevP2Center, axis);
@@ -116,7 +128,10 @@ public class ObjectPhysicsController : NetworkBehaviour
             float ejeX = swapAxes ? rollAngle : pitchAngle;
             float ejeZ = swapAxes ? pitchAngle : rollAngle;
             Quaternion targetRotation = baseRotation * Quaternion.Euler(ejeX, 0, ejeZ);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Runner.DeltaTime * 10f);
+
+            // Rotación usando Rigidbody
+            Quaternion newRot = Quaternion.Slerp(rb.rotation, targetRotation, Runner.DeltaTime * 10f);
+            rb.MoveRotation(newRot);
         }
 
         prevP1Center = p1Center;
@@ -127,7 +142,13 @@ public class ObjectPhysicsController : NetworkBehaviour
     private void RPC_SoltarObjeto()
     {
         HasDropped = true;
-        rb.isKinematic = false;
-        rb.useGravity = true;
+
+        // Liberamos el Rigidbody para que caiga con físicas reales
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+            rb.mass = 1f; // Ajusta según el "peso" visual de la olla
+        }
     }
 }
