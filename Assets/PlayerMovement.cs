@@ -17,8 +17,9 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Animación / Rigging")]
     public Transform torsoBone;
+    // NUEVO: Referencia al Animator
+    public Animator animator;
 
-    // NUEVO: Límite de giro
     [Tooltip("Ángulo máximo hacia cada lado. 90 significa 180 grados de rango total.")]
     public float maxTorsoAngle = 90f;
 
@@ -41,11 +42,6 @@ public class PlayerMovement : NetworkBehaviour
         if (potObject != null)
         {
             sharedPot = potObject.transform;
-            Debug.Log("¡Olla encontrada y asignada automáticamente!");
-        }
-        else
-        {
-            Debug.LogWarning("OJO: No se encontró la olla. ¿Te olvidaste de ponerle el Tag 'Olla'?");
         }
     }
 
@@ -68,7 +64,7 @@ public class PlayerMovement : NetworkBehaviour
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             }
 
-            // 3. ROTACIÓN DEL CUERPO (Hacia la olla o cámara)
+            // 3. ROTACIÓN DEL CUERPO
             if (sharedPot != null)
             {
                 Vector3 directionToPot = sharedPot.position - transform.position;
@@ -92,34 +88,23 @@ public class PlayerMovement : NetworkBehaviour
                 }
             }
 
-            // 3.5. CÁLCULO DE LA ROTACIÓN DEL TORSO (Limitada a 180 grados)
+            // 3.5. CÁLCULO DE LA ROTACIÓN DEL TORSO
             if (torsoBone != null)
             {
-                // Dirección en la que mira el cuerpo (ignorando altura)
                 Vector3 bodyForwardFlat = transform.forward;
                 bodyForwardFlat.y = 0f;
                 bodyForwardFlat.Normalize();
 
-                // Dirección en la que mira la cámara (ignorando altura)
                 Vector3 cameraForwardFlat = data.cameraForward;
                 cameraForwardFlat.y = 0f;
                 cameraForwardFlat.Normalize();
 
                 if (cameraForwardFlat != Vector3.zero && bodyForwardFlat != Vector3.zero)
                 {
-                    // Calculamos el ángulo entre el cuerpo y la cámara (-180 a 180)
                     float angle = Vector3.SignedAngle(bodyForwardFlat, cameraForwardFlat, Vector3.up);
-
-                    // Lo limitamos. Si maxTorsoAngle es 90, el ángulo nunca pasará de -90 ni de 90
                     float clampedAngle = Mathf.Clamp(angle, -maxTorsoAngle, maxTorsoAngle);
-
-                    // Calculamos la nueva dirección aplicando el ángulo limitado
                     Vector3 finalForwardFlat = Quaternion.Euler(0, clampedAngle, 0) * bodyForwardFlat;
-
-                    // Si quieres que mire arriba/abajo, le devolvemos la 'Y' de la cámara.
-                    // Si prefieres que el torso no cabecee arriba/abajo, cambia data.cameraForward.y por 0f.
                     Vector3 finalForward = new Vector3(finalForwardFlat.x, data.cameraForward.y, finalForwardFlat.z);
-
                     targetTorsoRotation = Quaternion.LookRotation(finalForward);
                 }
             }
@@ -142,6 +127,17 @@ public class PlayerMovement : NetworkBehaviour
             {
                 Vector3 limitedVelocity = flatVelocity.normalized * maxSpeed;
                 rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
+            }
+
+            // NUEVO -> 6. MANDAR VALORES AL ANIMATOR PARA LAS PIERNAS
+            if (animator != null)
+            {
+                // Pasamos directamente el input (WASD / Joystick) al Blend Tree.
+                // Como el cuerpo del Rigidbody siempre mira hacia la cámara/olla, 
+                // data.vertical (W/S) siempre será caminar de frente o hacia atrás,
+                // y data.horizontal (A/D) siempre será hacer "strafe" lateral.
+                animator.SetFloat("VelX", data.horizontal);
+                animator.SetFloat("VelZ", data.vertical);
             }
         }
     }

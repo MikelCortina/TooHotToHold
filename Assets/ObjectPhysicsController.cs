@@ -112,9 +112,14 @@ public class ObjectPhysicsController : NetworkBehaviour
         float stretchRatio = Mathf.Clamp01((currentDistance - minDistance) / (maxDistance - minDistance));
         float pitchAngle = stretchRatio * maxRotationAngle * currentPullDirection;
 
-        float distLeft = Vector3.Distance(p1_HandLeft.position, p2_HandLeft.position);
-        float distRight = Vector3.Distance(p1_HandRight.position, p2_HandRight.position);
-        float rollAngle = Mathf.Clamp(((distLeft - distRight) / (maxDistance - minDistance)) * maxRotationAngle, -maxRotationAngle, maxRotationAngle);
+        // El lado izquierdo desde la perspectiva del P1 es el derecho del P2
+        float distLadoIzquierdo = Vector3.Distance(p1_HandLeft.position, p2_HandRight.position);
+
+        // El lado derecho desde la perspectiva del P1 es el izquierdo del P2
+        float distLadoDerecho = Vector3.Distance(p1_HandRight.position, p2_HandLeft.position);
+
+        // Calculamos el ángulo basándonos en los lados paralelos de la bandeja
+        float rollAngle = Mathf.Clamp(((distLadoIzquierdo - distLadoDerecho) / (maxDistance - minDistance)) * maxRotationAngle, -maxRotationAngle, maxRotationAngle);
 
         if (invertX) pitchAngle *= -1f;
         if (invertZ) rollAngle *= -1f;
