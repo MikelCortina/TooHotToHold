@@ -301,7 +301,7 @@ GameObject:
   - component: {fileID: 30617337}
   m_Layer: 6
   m_Name: Bandeja
-  m_TagString: Untagged
+  m_TagString: Bandeja
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -6143,6 +6143,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: d9176ca9a1b027548847ed81647dcf57, type: 3}
       propertyPath: m_Name
       value: pot (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: d9176ca9a1b027548847ed81647dcf57, type: 3}
+      propertyPath: m_TagString
+      value: Bandeja
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
