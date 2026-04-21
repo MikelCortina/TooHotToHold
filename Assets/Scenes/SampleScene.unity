@@ -402,7 +402,7 @@ MonoBehaviour:
   minDistance: 2
   maxDistance: 5
   invertX: 0
-  invertZ: 0
+  invertZ: 1
   swapAxes: 0
 --- !u!4 &30617335
 Transform:

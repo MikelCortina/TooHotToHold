@@ -15,14 +15,18 @@ public class PlayerMovement : NetworkBehaviour
     [Header("Cooperativo")]
     public Transform sharedPot;
 
-    // NUEVO: Referencia al objeto que rotará con la cámara
-    [Header("Visuales")]
-    public Transform objectToRotateWithCamera;
+    [Header("Animación / Rigging")]
+    public Transform torsoBone;
+
+    // NUEVO: Límite de giro
+    [Tooltip("Ángulo máximo hacia cada lado. 90 significa 180 grados de rango total.")]
+    public float maxTorsoAngle = 90f;
 
     private Rigidbody rb;
     [Networked] private NetworkBool isGrounded { get; set; }
-
     [Networked] private NetworkButtons previousButtons { get; set; }
+
+    private Quaternion targetTorsoRotation;
 
     private void Awake()
     {
@@ -32,7 +36,6 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void Spawned()
     {
-        // Buscamos la bandeja automáticamente al hacer spawn
         GameObject potObject = GameObject.FindGameObjectWithTag("Bandeja");
 
         if (potObject != null)
@@ -65,11 +68,11 @@ public class PlayerMovement : NetworkBehaviour
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             }
 
-            // 3. ROTACIÓN DEL CUERPO (Hacia la olla)
+            // 3. ROTACIÓN DEL CUERPO (Hacia la olla o cámara)
             if (sharedPot != null)
             {
                 Vector3 directionToPot = sharedPot.position - transform.position;
-                directionToPot.y = 0f; // Rotación plana
+                directionToPot.y = 0f;
 
                 if (directionToPot != Vector3.zero)
                 {
@@ -79,7 +82,6 @@ public class PlayerMovement : NetworkBehaviour
             }
             else
             {
-                // Fallback: Si no hay olla, el cuerpo rota con la cámara
                 Vector3 flatCameraForwardBody = data.cameraForward;
                 flatCameraForwardBody.y = 0f;
                 if (flatCameraForwardBody != Vector3.zero)
@@ -90,22 +92,35 @@ public class PlayerMovement : NetworkBehaviour
                 }
             }
 
-            // NUEVO -> 3.5. ROTACIÓN DEL OBJETO EXTRA (Hacia la cámara)
-            if (objectToRotateWithCamera != null)
+            // 3.5. CÁLCULO DE LA ROTACIÓN DEL TORSO (Limitada a 180 grados)
+            if (torsoBone != null)
             {
-                Vector3 flatCameraForwardObj = data.cameraForward;
+                // Dirección en la que mira el cuerpo (ignorando altura)
+                Vector3 bodyForwardFlat = transform.forward;
+                bodyForwardFlat.y = 0f;
+                bodyForwardFlat.Normalize();
 
-                // IMPORTANTE: Si quieres que el objeto también mire hacia arriba/abajo (ej: una linterna), 
-                // comenta o borra la siguiente línea. Si solo quieres que gire de izquierda a derecha, déjala.
-                flatCameraForwardObj.y = 0f;
+                // Dirección en la que mira la cámara (ignorando altura)
+                Vector3 cameraForwardFlat = data.cameraForward;
+                cameraForwardFlat.y = 0f;
+                cameraForwardFlat.Normalize();
 
-                if (flatCameraForwardObj != Vector3.zero)
+                if (cameraForwardFlat != Vector3.zero && bodyForwardFlat != Vector3.zero)
                 {
-                    flatCameraForwardObj.Normalize();
-                    Quaternion targetObjRotation = Quaternion.LookRotation(flatCameraForwardObj);
+                    // Calculamos el ángulo entre el cuerpo y la cámara (-180 a 180)
+                    float angle = Vector3.SignedAngle(bodyForwardFlat, cameraForwardFlat, Vector3.up);
 
-                    // Usamos .rotation en lugar de .localRotation para que ignore la rotación del cuerpo padre
-                    objectToRotateWithCamera.rotation = Quaternion.Slerp(objectToRotateWithCamera.rotation, targetObjRotation, Runner.DeltaTime * 15f);
+                    // Lo limitamos. Si maxTorsoAngle es 90, el ángulo nunca pasará de -90 ni de 90
+                    float clampedAngle = Mathf.Clamp(angle, -maxTorsoAngle, maxTorsoAngle);
+
+                    // Calculamos la nueva dirección aplicando el ángulo limitado
+                    Vector3 finalForwardFlat = Quaternion.Euler(0, clampedAngle, 0) * bodyForwardFlat;
+
+                    // Si quieres que mire arriba/abajo, le devolvemos la 'Y' de la cámara.
+                    // Si prefieres que el torso no cabecee arriba/abajo, cambia data.cameraForward.y por 0f.
+                    Vector3 finalForward = new Vector3(finalForwardFlat.x, data.cameraForward.y, finalForwardFlat.z);
+
+                    targetTorsoRotation = Quaternion.LookRotation(finalForward);
                 }
             }
 
@@ -128,6 +143,14 @@ public class PlayerMovement : NetworkBehaviour
                 Vector3 limitedVelocity = flatVelocity.normalized * maxSpeed;
                 rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
             }
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (torsoBone != null && targetTorsoRotation != default(Quaternion))
+        {
+            torsoBone.rotation = Quaternion.Slerp(torsoBone.rotation, targetTorsoRotation, Time.deltaTime * 15f);
         }
     }
 }

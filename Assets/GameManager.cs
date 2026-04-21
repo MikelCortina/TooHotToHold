@@ -88,8 +88,8 @@ public class GameManager : MonoBehaviour, INetworkRunnerCallbacks
     {
         var data = new NetworkInputData();
 
-        data.horizontal = Input.GetAxis("Horizontal");
-        data.vertical = Input.GetAxis("Vertical");
+        data.horizontal = Input.GetAxisRaw("Horizontal");
+        data.vertical = Input.GetAxisRaw("Vertical");
 
         // NUEVO: Guardamos el estado del botón de salto
         data.buttons.Set(MyButtons.Jump, Input.GetKey(KeyCode.Space));

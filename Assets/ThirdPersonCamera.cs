@@ -7,11 +7,16 @@ public class ThirdPersonCamera : MonoBehaviour
     public NetworkObject targetNetworkObject;
 
     [Tooltip("Arrastra aquí el modelo 3D HIJO del jugador, el mismo que pusiste en Interpolation Target")]
-    public Transform interpolationTarget; // <--- ¡LA CLAVE ESTÁ AQUÍ!
+    public Transform interpolationTarget;
 
     public float distance = 5f;
     public float mouseSensitivity = 2f;
     public Vector2 pitchMinMax = new Vector2(-40, 85);
+
+    // NUEVO: Límite horizontal de la cámara
+    [Header("Límites de Cámara")]
+    [Tooltip("Ángulo máximo horizontal (izquierda/derecha) respecto al cuerpo. 90 = 180 grados en total.")]
+    public float maxYawAngle = 90f;
 
     private float yaw;
     private float pitch;
@@ -22,6 +27,11 @@ public class ThirdPersonCamera : MonoBehaviour
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
+            // Inicializamos el yaw/pitch con la rotación inicial para evitar un "salto" brusco al empezar
+            Vector3 angles = transform.eulerAngles;
+            yaw = angles.y;
+            pitch = angles.x;
         }
         else
         {
@@ -29,7 +39,6 @@ public class ThirdPersonCamera : MonoBehaviour
         }
     }
 
-    // Usar LateUpdate es correcto, se ejecuta después de que Fusion actualiza los visuales.
     void LateUpdate()
     {
         if (targetNetworkObject == null || !targetNetworkObject.HasInputAuthority) return;
@@ -38,6 +47,18 @@ public class ThirdPersonCamera : MonoBehaviour
         yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
         pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
         pitch = Mathf.Clamp(pitch, pitchMinMax.x, pitchMinMax.y);
+
+        // NUEVO: Limitar el giro horizontal (Yaw) respecto a la rotación del cuerpo padre
+        float rootYaw = targetNetworkObject.transform.eulerAngles.y;
+
+        // Calculamos cuántos grados de diferencia hay entre hacia dónde mira el cuerpo y hacia dónde quiere mirar la cámara
+        float deltaYaw = Mathf.DeltaAngle(rootYaw, yaw);
+
+        // Bloqueamos esa diferencia para que no pase de nuestro límite (-90 a 90)
+        float clampedDeltaYaw = Mathf.Clamp(deltaYaw, -maxYawAngle, maxYawAngle);
+
+        // Le devolvemos el valor bloqueado al yaw real
+        yaw = rootYaw + clampedDeltaYaw;
 
         Vector3 targetRotation = new Vector3(pitch, yaw);
         transform.eulerAngles = targetRotation;
