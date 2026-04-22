@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Bandeja
+  - Grip_Left
+  - Grip_Right
   layers:
   - Default
   - TransparentFX

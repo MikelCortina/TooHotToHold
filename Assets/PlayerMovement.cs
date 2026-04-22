@@ -1,5 +1,6 @@
-using UnityEngine;
 using Fusion;
+using UnityEngine;
+using UnityEngine.Animations.Rigging;
 
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : NetworkBehaviour
@@ -17,7 +18,6 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Animación / Rigging")]
     public Transform torsoBone;
-    // NUEVO: Referencia al Animator
     public Animator animator;
 
     [Tooltip("Ángulo máximo hacia cada lado. 90 significa 180 grados de rango total.")]
@@ -27,21 +27,40 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] private NetworkBool isGrounded { get; set; }
     [Networked] private NetworkButtons previousButtons { get; set; }
 
+    // --- NUEVAS VARIABLES NETWORKED PARA ANIMACIÓN Y RIGGING ---
+    [Networked] private float netVelX { get; set; }
+    [Networked] private float netVelZ { get; set; }
+    [Networked] private NetworkBool netIsGrabbingPot { get; set; }
+    [Networked] private Quaternion netTorsoRotation { get; set; } // Necesario porque los Proxies no tienen "cameraForward"
+
     private Quaternion targetTorsoRotation;
+    private Quaternion smoothedTorsoRotation;
+
+    public Transform torsoTarget;
+
+    [Header("Animación / Rigging - Manos")]
+    public Transform leftHandTarget;
+    public Transform rightHandTarget;
+    public TwoBoneIKConstraint leftArmIK;
+    public TwoBoneIKConstraint rightArmIK;
+    public Transform potGripLeft;
+    public Transform potGripRight;
+
+    private float targetIKWeight = 0f;
+    private float currentIKWeight = 0f;
+    public float ikTransitionSpeed = 5f;
+
+    [Tooltip("Distancia máxima a la que el jugador puede alejarse de la olla")]
+    public float maxArmReach = 1.3f;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
-    }
 
-    public override void Spawned()
-    {
-        GameObject potObject = GameObject.FindGameObjectWithTag("Bandeja");
-
-        if (potObject != null)
+        if (torsoBone != null)
         {
-            sharedPot = potObject.transform;
+            smoothedTorsoRotation = torsoBone.rotation;
         }
     }
 
@@ -58,7 +77,7 @@ public class PlayerMovement : NetworkBehaviour
             NetworkButtons pressedButtons = data.buttons.GetPressed(previousButtons);
             previousButtons = data.buttons;
 
-            if (pressedButtons.IsSet(MyButtons.Jump) && isGrounded)
+            if (pressedButtons.IsSet(MyButtons.Jump) && isGrounded) // Asegúrate de definir MyButtons.Jump en tu código
             {
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
@@ -88,7 +107,7 @@ public class PlayerMovement : NetworkBehaviour
                 }
             }
 
-            // 3.5. CÁLCULO DE LA ROTACIÓN DEL TORSO
+            // 3.5. CÁLCULO DE LA ROTACIÓN DEL TORSO (Guardado en red)
             if (torsoBone != null)
             {
                 Vector3 bodyForwardFlat = transform.forward;
@@ -103,13 +122,14 @@ public class PlayerMovement : NetworkBehaviour
                 {
                     float angle = Vector3.SignedAngle(bodyForwardFlat, cameraForwardFlat, Vector3.up);
                     float clampedAngle = Mathf.Clamp(angle, -maxTorsoAngle, maxTorsoAngle);
+
                     Vector3 finalForwardFlat = Quaternion.Euler(0, clampedAngle, 0) * bodyForwardFlat;
-                    Vector3 finalForward = new Vector3(finalForwardFlat.x, data.cameraForward.y, finalForwardFlat.z);
-                    targetTorsoRotation = Quaternion.LookRotation(finalForward);
+
+                    // En lugar de usar una variable local, la guardamos en la red
+                    netTorsoRotation = Quaternion.LookRotation(finalForwardFlat);
                 }
             }
 
-            // 4. MOVIMIENTO HORIZONTAL
             Vector3 flatCameraRight = data.cameraRight;
             flatCameraRight.y = 0f;
             flatCameraRight.Normalize();
@@ -119,9 +139,33 @@ public class PlayerMovement : NetworkBehaviour
             flatCameraForwardDir.Normalize();
 
             Vector3 moveDir = (flatCameraForwardDir * data.vertical + flatCameraRight * data.horizontal).normalized;
+
+            // --- CORREA FÍSICA ---
+            if (sharedPot != null)
+            {
+                Vector3 playerPosFlat = new Vector3(transform.position.x, 0, transform.position.z);
+                Vector3 potPosFlat = new Vector3(sharedPot.position.x, 0, sharedPot.position.z);
+                float distanceToPot = Vector3.Distance(playerPosFlat, potPosFlat);
+
+                if (distanceToPot >= maxArmReach)
+                {
+                    Vector3 dirToPot = (potPosFlat - playerPosFlat).normalized;
+                    if (Vector3.Dot(moveDir, dirToPot) < 0)
+                    {
+                        moveDir = Vector3.ProjectOnPlane(moveDir, dirToPot);
+                        Vector3 currentVel = rb.linearVelocity;
+                        Vector3 flatVel = new Vector3(currentVel.x, 0, currentVel.z);
+                        if (Vector3.Dot(flatVel, dirToPot) < 0)
+                        {
+                            Vector3 correctedVel = Vector3.ProjectOnPlane(flatVel, dirToPot);
+                            rb.linearVelocity = new Vector3(correctedVel.x, currentVel.y, correctedVel.z);
+                        }
+                    }
+                }
+            }
+
             rb.AddForce(moveDir * moveForce, ForceMode.Acceleration);
 
-            // 5. LIMITAR VELOCIDAD
             Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
             if (flatVelocity.magnitude > maxSpeed)
             {
@@ -129,24 +173,51 @@ public class PlayerMovement : NetworkBehaviour
                 rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
             }
 
-            // NUEVO -> 6. MANDAR VALORES AL ANIMATOR PARA LAS PIERNAS
-            if (animator != null)
-            {
-                // Pasamos directamente el input (WASD / Joystick) al Blend Tree.
-                // Como el cuerpo del Rigidbody siempre mira hacia la cámara/olla, 
-                // data.vertical (W/S) siempre será caminar de frente o hacia atrás,
-                // y data.horizontal (A/D) siempre será hacer "strafe" lateral.
-                animator.SetFloat("VelX", data.horizontal);
-                animator.SetFloat("VelZ", data.vertical);
-            }
+            // --- GUARDAMOS VALORES VISUALES EN LA RED ---
+            netVelX = data.horizontal;
+            netVelZ = data.vertical;
+            netIsGrabbingPot = sharedPot != null;
         }
+    }
+
+    // Usamos Render() que es el estándar de Fusion para actualizar lo visual en TODOS los clientes
+    public override void Render()
+    {
+        // 1. MANDAR VALORES AL ANIMATOR (Ahora todos los clientes lo hacen)
+        if (animator != null)
+        {
+            animator.SetFloat("VelX", netVelX);
+            animator.SetFloat("VelZ", netVelZ);
+        }
+
+        // 2. ACTUALIZAR PESO DEL IK
+        targetIKWeight = netIsGrabbingPot ? 1f : 0f;
     }
 
     private void LateUpdate()
     {
-        if (torsoBone != null && targetTorsoRotation != default(Quaternion))
+        // LateUpdate se ejecuta para todos (Input Auth, State Auth y Proxies)
+
+        // 1. LÓGICA DEL TORSO (Usando la rotación de red, así el J2 ve al J1 rotar el torso)
+        if (torsoBone != null && netTorsoRotation != default(Quaternion))
         {
-            torsoBone.rotation = Quaternion.Slerp(torsoBone.rotation, targetTorsoRotation, Time.deltaTime * 15f);
+            smoothedTorsoRotation = Quaternion.Slerp(smoothedTorsoRotation, netTorsoRotation, Time.deltaTime * 15f);
+            torsoTarget.rotation = smoothedTorsoRotation;
+        }
+
+        // 2. LÓGICA DE LAS MANOS IK
+        currentIKWeight = Mathf.Lerp(currentIKWeight, targetIKWeight, Time.deltaTime * ikTransitionSpeed);
+
+        if (leftArmIK != null) leftArmIK.weight = currentIKWeight;
+        if (rightArmIK != null) rightArmIK.weight = currentIKWeight;
+
+        if (currentIKWeight > 0.01f && potGripLeft != null && potGripRight != null)
+        {
+            leftHandTarget.position = potGripLeft.position;
+            leftHandTarget.rotation = potGripLeft.rotation;
+
+            rightHandTarget.position = potGripRight.position;
+            rightHandTarget.rotation = potGripRight.rotation;
         }
     }
 }

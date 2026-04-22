@@ -396,11 +396,15 @@ MonoBehaviour:
   p1_HandRight: {fileID: 0}
   p2_HandLeft: {fileID: 0}
   p2_HandRight: {fileID: 0}
+  p1_GripLeft: {fileID: 2056685007}
+  p1_GripRight: {fileID: 1431401414}
+  p2_GripLeft: {fileID: 1168689791}
+  p2_GripRight: {fileID: 474998844}
   followSpeed: 8
   maxRotationAngle: 60
   dropDistance: 6
-  minDistance: 2
-  maxDistance: 5
+  minDistance: 1
+  maxDistance: 4
   invertX: 0
   invertZ: 0
   swapAxes: 0
@@ -419,6 +423,10 @@ Transform:
   m_Children:
   - {fileID: 1472956066}
   - {fileID: 2047411050}
+  - {fileID: 1168689791}
+  - {fileID: 474998844}
+  - {fileID: 2056685007}
+  - {fileID: 1431401414}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &30617336
@@ -2514,6 +2522,37 @@ Mesh:
     offset: 0
     size: 0
     path: 
+--- !u!1 &474998843
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 474998844}
+  m_Layer: 6
+  m_Name: Grip_Right
+  m_TagString: Grip_Right
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &474998844
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474998843}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalPosition: {x: -0.155, y: 0, z: 0.651}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 30617335}
+  m_LocalEulerAnglesHint: {x: 180, y: 0, z: 180}
 --- !u!43 &476427103
 Mesh:
   m_ObjectHideFlags: 0
@@ -4596,6 +4635,37 @@ Mesh:
     offset: 0
     size: 0
     path: 
+--- !u!1 &1168689790
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1168689791}
+  m_Layer: 6
+  m_Name: Grip_Left
+  m_TagString: Grip_Left
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1168689791
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168689790}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalPosition: {x: 0.087, y: 0, z: 0.659}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 30617335}
+  m_LocalEulerAnglesHint: {x: 180, y: 0, z: 180}
 --- !u!1 &1179731420
 GameObject:
   m_ObjectHideFlags: 0
@@ -6084,6 +6154,37 @@ Mesh:
     offset: 0
     size: 0
     path: 
+--- !u!1 &1431401413
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1431401414}
+  m_Layer: 6
+  m_Name: P2_GripRight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1431401414
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431401413}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.14, y: 0, z: -0.621}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 30617335}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1472956065
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9092,6 +9193,37 @@ MonoBehaviour:
   - {fileID: 2047411052}
   - {fileID: 2047411051}
   ForceRemoteRenderTimeframe: 0
+--- !u!1 &2056685006
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2056685007}
+  m_Layer: 6
+  m_Name: P2_GripLeft
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2056685007
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2056685006}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.158, y: 0, z: -0.615}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 30617335}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2125451291
 GameObject:
   m_ObjectHideFlags: 0

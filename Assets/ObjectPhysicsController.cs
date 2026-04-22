@@ -9,6 +9,15 @@ public class ObjectPhysicsController : NetworkBehaviour
     public Transform p2_HandLeft;
     public Transform p2_HandRight;
 
+    [Header("Grips (Agarres) de la Olla")]
+    [Tooltip("Agarres específicos para el Jugador 1")]
+    public Transform p1_GripLeft;
+    public Transform p1_GripRight;
+
+    [Tooltip("Agarres específicos para el Jugador 2")]
+    public Transform p2_GripLeft;
+    public Transform p2_GripRight;
+
     [Header("Configuración")]
     public float followSpeed = 8f;
     public float maxRotationAngle = 180f;
@@ -64,15 +73,75 @@ public class ObjectPhysicsController : NetworkBehaviour
 
     private void FindHands()
     {
-        PlayerHands[] players = FindObjectsOfType<PlayerHands>();
+        // 1. Buscamos a los jugadores
+        PlayerMovement[] players = FindObjectsOfType<PlayerMovement>();
+
+        // DEBUG: Ver cuántos jugadores encuentra en este frame
+        Debug.Log($"[OLLA] Buscando jugadores... Encontrados actualmente: {players.Length}");
+
         if (players.Length >= 2)
         {
-            System.Array.Sort(players, (a, b) => a.Object.InputAuthority.RawEncoded.CompareTo(b.Object.InputAuthority.RawEncoded));
+            Debug.Log("[OLLA] ¡2 Jugadores encontrados! Intentando ordenarlos por su InputAuthority...");
 
-            p1_HandLeft = players[0].manoIzquierda;
-            p1_HandRight = players[0].manoDerecha;
-            p2_HandLeft = players[1].manoIzquierda;
-            p2_HandRight = players[1].manoDerecha;
+            try
+            {
+                // Ordenamos por ID para saber quién es P1 y P2
+                System.Array.Sort(players, (a, b) => a.Object.InputAuthority.RawEncoded.CompareTo(b.Object.InputAuthority.RawEncoded));
+                Debug.Log($"[OLLA] Ordenamiento exitoso. P1 ID: {players[0].Object.InputAuthority.RawEncoded} | P2 ID: {players[1].Object.InputAuthority.RawEncoded}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[OLLA] Error al ordenar. Es posible que los jugadores aún no tengan InputAuthority asignada por Fusion. Reintentando en el próximo tick... Error: {e.Message}");
+                return; // Salimos y volvemos a intentar en el siguiente tick
+            }
+
+            PlayerMovement p1Movement = players[0];
+            PlayerMovement p2Movement = players[1];
+
+            // 2. Buscamos los PlayerHands. Usamos GetComponent si dices que están en el mismo objeto
+            PlayerHands p1Hands = p1Movement.GetComponent<PlayerHands>();
+            PlayerHands p2Hands = p2Movement.GetComponent<PlayerHands>();
+
+            // Si por algún motivo están en hijos, usamos GetComponentInChildren como respaldo
+            if (p1Hands == null) p1Hands = p1Movement.GetComponentInChildren<PlayerHands>();
+            if (p2Hands == null) p2Hands = p2Movement.GetComponentInChildren<PlayerHands>();
+
+            // DEBUG: Comprobar si encontró las manos
+            if (p1Hands == null) Debug.LogError("[OLLA] ERROR CRÍTICO: No se encontró el script 'PlayerHands' en el Jugador 1.");
+            if (p2Hands == null) Debug.LogError("[OLLA] ERROR CRÍTICO: No se encontró el script 'PlayerHands' en el Jugador 2.");
+
+            if (p1Hands != null && p2Hands != null)
+            {
+                Debug.Log("[OLLA] Scripts PlayerHands encontrados en ambos. Asignando referencias...");
+
+                // Asignamos a la olla (Físicas)
+                p1_HandLeft = p1Hands.manoIzquierda;
+                p1_HandRight = p1Hands.manoDerecha;
+                p2_HandLeft = p2Hands.manoIzquierda;
+                p2_HandRight = p2Hands.manoDerecha;
+
+                // DEBUG: Comprobar que los 4 grips de la olla no estén nulos antes de pasarlos
+                if (p1_GripLeft == null || p1_GripRight == null || p2_GripLeft == null || p2_GripRight == null)
+                {
+                    Debug.LogWarning("[OLLA] ¡OJO! Faltan grips por asignar en el Inspector del ObjectPhysicsController.");
+                }
+
+                // Asignamos al P1 (IK) - Ahora usa sus propios grips
+                p1Movement.sharedPot = this.transform;
+                p1Movement.potGripLeft = this.p1_GripLeft;
+                p1Movement.potGripRight = this.p1_GripRight;
+
+                // Asignamos al P2 (IK) - Ahora usa sus propios grips (sin cruzar variables)
+                p2Movement.sharedPot = this.transform;
+                p2Movement.potGripLeft = this.p2_GripLeft;
+                p2Movement.potGripRight = this.p2_GripRight;
+
+                Debug.Log("<color=green>[OLLA] ¡TODAS LAS REFERENCIAS ASIGNADAS CORRECTAMENTE!</color>");
+            }
+        }
+        else
+        {
+            Debug.Log("[OLLA] Esperando a que el segundo jugador haga spawn en la red para hacer las asignaciones...");
         }
     }
 
